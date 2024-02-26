@@ -89,7 +89,13 @@ class TicTacToe
     ]
 
     winning_combinations.each do |win_combo|
-      win_combo.all?('X') || win_combo.all?
+      if @game_board.all? { |position| @game_board[position] == 'O' }
+        return true
+      elsif @game_board.all? { |position| @game_board[position] == 'X' }
+        return true
+      else
+        return false
+      end
     end
   end
 
@@ -98,7 +104,7 @@ class TicTacToe
     if gets.chomp.downcase == 'y'
       start_game
     else
-      puts 'Game Aborted!'
+      puts 'Game Stopped'
       return
     end
   end
@@ -114,6 +120,7 @@ class TicTacToe
   def update_board(row, index, symbol)
     @game_board[row][index] = symbol
     show_board
+    check_win
   end
 
   def welcome_message

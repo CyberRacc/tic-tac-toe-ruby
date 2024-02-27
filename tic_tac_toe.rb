@@ -6,11 +6,26 @@ module Utils
   def clear_console
     Kernel.system('clear') || Kernel.system('cls')
   end
+
+  def welcome_message
+    Kernel.puts "Welcome to CyberRacc's Tic Tac Toe game in Ruby!"
+  end
 end
 
-# TicTacToe Class
-class TicTacToe
+# Methods related to the Gameboard
+class GameBoard
   include Utils
+
+  WINNING_COMBINATIONS = [
+    [0, 1, 2], # top row
+    [3, 4, 5], # middle row
+    [6, 7, 8], # bottom row
+    [0, 3, 6], # left column
+    [1, 4, 7], # middle column
+    [2, 5, 8], # right column
+    [0, 4, 8], # diagonal top-left to bottom-right
+    [2, 4, 6]  # diagonal top-right to bottom-left
+  ].freeze # The .freeze method is called on this array to prevent it from being changed since it's a constant.
 
   def initialize
     # 2D Grid array for the game board
@@ -19,80 +34,6 @@ class TicTacToe
       ['-', '-', '-'],
       ['-', '-', '-']
     ]
-    welcome_message
-    @player = Player.new(user_name, user_symbol)
-    @cpu = Player.new('CPU', @player.symbol == 'X' ? 'O' : 'X')
-    prompt_game
-  end
-
-  private
-
-  def start_game
-    clear_console
-    show_board
-    if first_mover == 'cpu'
-      clear_console
-      puts "Making CPU Move"
-      cpu_move
-    else
-      clear_console
-      puts "Making Player Move"
-      player_move
-    end
-  end
-
-  def cpu_move
-    # Rows: 0-2
-    # Columns: 0-2
-    rand_row = rand(0..2)
-    rand_col = rand(0..2)
-    update_board(rand_row, rand_col, @cpu.symbol)
-
-    # After move has been made, check if the game as been won.
-    if check_win == false
-      player_move
-    else
-      declare_winner(@cpu)
-    end
-  end
-
-  def player_move
-    player_row = 0
-    player_col = 0
-
-    # Nested loop to get player row and col choice and check if move is valid
-    loop do
-      # Get the user's row choice
-      loop do
-        print "Which column do you want to place your #{@player.symbol}? (0, 1, 2): "
-        player_row = gets.chomp.to_i
-        break if (0..2).include?(player_row.to_i)
-      end
-
-      # Get the user's column choice
-      loop do
-        print "Which column do you want to place your #{@player.symbol}? (0, 1, 2): "
-        player_col = gets.chomp.to_i
-        break if (0..2).include?(player_col.to_i)
-      end
-      break if move_valid?(player_row, player_col)
-    end
-
-    update_board(player_row, player_col, @player.symbol)
-
-    # May need a check here for if the board is already full
-    # Maybe a predicate method like board_full?
-
-    if check_win == false
-      cpu_move
-    else
-      declare_winner(@player)
-    end
-  end
-
-  def declare_winner(winner)
-    puts "The winner is #{winner}!"
-    play_again
   end
 
   def play_again
@@ -115,41 +56,13 @@ class TicTacToe
 
   # Predicate method to check if the current move is valid.
   def move_valid?(row, column)
-    puts "Move is valid" if @game_board[row][column] == '-'
+    puts 'Move is valid' if @game_board[row][column] == '-'
   end
 
   # Should be executed after every move
   def check_win
-    # May want to define this elswhere like in initialize, but should be fine.
-    winning_combinations = [
-      [0, 1, 2], # top row
-      [3, 4, 5], # middle row
-      [6, 7, 8], # bottom row
-      [0, 3, 6], # left column
-      [1, 4, 7], # middle column
-      [2, 5, 8], # right column
-      [0, 4, 8], # diagonal top-left to bottom-right
-      [2, 4, 6]  # diagonal top-right to bottom-left
-    ]
-
-    winning_combinations.each do |win_combo|
-      if win_combo.all? { |position| @game_board[position] == 'O' }
-        return true
-      elsif win_combo.all? { |position| @game_board[position] == 'X' }
-        return true
-      else
-        return false
-      end
-    end
-  end
-
-  def prompt_game
-    print "Start game? (y/n): "
-    if gets.chomp.downcase == 'y'
-      start_game
-    else
-      puts 'Game Stopped'
-      return
+    WINNING_COMBINATIONS.each do |win_combo|
+      win_combo.all? { |position| @game_board[position] == 'O' || @game_board[position] == 'X' }
     end
   end
 
@@ -167,8 +80,83 @@ class TicTacToe
     check_win
   end
 
-  def welcome_message
-    puts "Welcome to CyberRacc's Tic Tac Toe game in Ruby!"
+  def start_game
+    clear_console
+    show_board
+    puts @game_board.first_mover == 'cpu' ? 'Making CPU Move' : 'Making Player Move'
+    @game_board.first_mover == 'cpu' ? @game_board.cpu_move : @game_board.player_move
+  end
+end
+
+# TicTacToe Class
+class TicTacToe
+  include Utils
+
+  def initialize
+    welcome_message
+    @player = Player.new(user_name, user_symbol)
+    @cpu = Player.new('CPU', @player.symbol == 'X' ? 'O' : 'X')
+    @game_board = GameBoard.new
+    prompt_game
+  end
+
+  private
+
+  def cpu_move
+    rand_row = rand(0..2)
+    rand_col = rand(0..2)
+    update_board(rand_row, rand_col, @cpu.symbol)
+
+    # After move has been made, check if the game as been won.
+    if @game_board.check_win == false
+      player_move
+    else
+      declare_winner(@cpu)
+    end
+  end
+
+  def player_move
+    loop do
+      player_row = player_choice('row')
+      player_col = player_choice('column')
+
+      break if @game_board.move_valid?(player_row, player_col)
+
+      puts 'Invalid move. Please try again.'
+    end
+
+    update_board(player_row, player_col, @player.symbol)
+
+    if @game_board.check_win == false
+      cpu_move
+    else
+      declare_winner(@player)
+    end
+  end
+
+  def player_choice(position)
+    loop do
+      print "Which #{position} do you want to place your #{@player.symbol}? (0, 1, 2): "
+      choice = gets.chomp.to_i
+      return choice if (0..2).include?(choice)
+
+      puts "Invalid #{position}. Please choose a valid #{position}."
+    end
+  end
+
+  def declare_winner(winner)
+    puts "The winner is #{winner}!"
+    @game_board.play_again
+  end
+
+  def prompt_game
+    print 'Start game? (y/n): '
+    if gets.chomp.downcase == 'y'
+      @game_board.start_game
+    else
+      puts 'Game Stopped'
+      nil
+    end
   end
 
   def user_name
@@ -182,42 +170,37 @@ class TicTacToe
     loop do
       print 'Choose your symbol (X)/(O): '
       sym = gets.chomp.upcase
-      break if sym == 'X' || sym == 'O'
+      break if %w[X O].include?(sym)
     end
-    return sym
+    sym
   end
 
-  # Determines the first player to make a move based on random chance.
   def first_mover
-    puts "To determine who goes first, choose a number between 1 and 10"
-    print "Enter a number from 1 to 10: "
-    user_num = gets.chomp.to_i
-    winner = String.new
+    winner = determine_first_mover
+    puts "The winner is #{winner}, they get first move."
+    winner
+  end
 
-    # Chooses random number between 1 and 10 for CPU.
+  def determine_first_mover
+    user_num, cpu_num = get_user_and_cpu_numbers
+    cpu_num > user_num ? 'cpu' : 'player'
+  end
+
+  def get_user_and_cpu_numbers
+    user_num = get_user_number
     cpu_num = rand(1..10)
-
-    # Determine winner based on who picked the higher number
-    if cpu_num > user_num
-      winner = 'cpu'
-    elsif user_num > cpu_num
-      winner = 'player'
-    else
-      loop do
-        print "Enter a number from 1 to 10: "
-        user_num = gets.chomp.to_i
-        cpu_num = rand(1..10)
-        break if (1..10).include?(user_num)
-      end
-      winner = cpu_num > user_num ? 'cpu' : 'player'
-    end
-
     puts "Player Number: #{user_num}"
     puts "CPU Number: #{cpu_num}"
-    puts "The winner is #{winner}, they get first move."
-    return winner
+    [user_num, cpu_num]
   end
 
+  def get_user_number
+    loop do
+      print 'Enter a number from 1 to 10: '
+      user_num = gets.chomp.to_i
+      return user_num if (1..10).include?(user_num)
+    end
+  end
 end
 
 # Define base class for Player and Player functions

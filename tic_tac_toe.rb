@@ -47,31 +47,75 @@ class TicTacToe
     rand_row = rand(0..2)
     rand_col = rand(0..2)
     update_board(rand_row, rand_col, @cpu.symbol)
-    player_move
+
+    # After move has been made, check if the game as been won.
+    if check_win == false
+      player_move
+    else
+      declare_winner(@cpu)
+    end
   end
 
   def player_move
     player_row = 0
     player_col = 0
 
-    # Get the user's row choice
+    # Nested loop to get player row and col choice and check if move is valid
     loop do
-      print "Which row would you like to play in? (0, 1, 2): "
-      player_row = gets.chomp.to_i
-      break if (0..2).include?(player_row)
+      # Get the user's row choice
+      loop do
+        print "Which column do you want to place your #{@player.symbol}? (0, 1, 2): "
+        player_row = gets.chomp.to_i
+        break if (0..2).include?(player_row.to_i)
+      end
+
+      # Get the user's column choice
+      loop do
+        print "Which column do you want to place your #{@player.symbol}? (0, 1, 2): "
+        player_col = gets.chomp.to_i
+        break if (0..2).include?(player_col.to_i)
+      end
+      break if move_valid?(player_row, player_col)
     end
 
-    # Get the user's column choice
-    loop do
-      print "Which column would you like to play in? (0, 1, 2): "
-      player_col = gets.chomp.to_i
-      break if (0..2).include?(player_col)
-    end
     update_board(player_row, player_col, @player.symbol)
 
     # May need a check here for if the board is already full
     # Maybe a predicate method like board_full?
-    cpu_move
+
+    if check_win == false
+      cpu_move
+    else
+      declare_winner(@player)
+    end
+  end
+
+  def declare_winner(winner)
+    puts "The winner is #{winner}!"
+    play_again
+  end
+
+  def play_again
+    answer = gets.chomp.downcase
+    if answer == 'y'
+      clear_console
+      clear_board
+    else
+      exit
+    end
+  end
+
+  def clear_board
+    @game_board = [
+      ['-', '-', '-'],
+      ['-', '-', '-'],
+      ['-', '-', '-']
+    ]
+  end
+
+  # Predicate method to check if the current move is valid.
+  def move_valid?(row, column)
+    puts "Move is valid" if @game_board[row][column] == '-'
   end
 
   # Should be executed after every move
@@ -89,9 +133,9 @@ class TicTacToe
     ]
 
     winning_combinations.each do |win_combo|
-      if @game_board.all? { |position| @game_board[position] == 'O' }
+      if win_combo.all? { |position| @game_board[position] == 'O' }
         return true
-      elsif @game_board.all? { |position| @game_board[position] == 'X' }
+      elsif win_combo.all? { |position| @game_board[position] == 'X' }
         return true
       else
         return false

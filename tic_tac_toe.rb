@@ -12,6 +12,58 @@ module Utils
   end
 end
 
+# Class containing methods specific to user input and interaction
+class UserInteraction
+  def prompt_game
+    print 'Start game? (y/n): '
+    gets.chomp.downcase == 'y'
+  end
+
+  def user_name
+    puts "What's your name?"
+    print 'My name is: '
+    gets.chomp.to_s
+  end
+
+  def user_symbol
+    sym = String.new
+    loop do
+      print 'Choose your symbol (X)/(O): '
+      sym = gets.chomp.upcase
+      break if %w[X O].include?(sym)
+    end
+    sym
+  end
+
+  def play_again?
+    puts 'Do you want to play again? (y/n): '
+    answer = gets.chomp.downcase
+    answer == 'y'
+  end
+
+  def display_player_info(player)
+    puts "#{player.name}'s Symbol: #{player.symbol}"
+  end
+
+  def player_choice(position)
+    loop do
+      print "Which #{position} do you want to place your #{@player.symbol}? (0, 1, 2): "
+      choice = gets.chomp.to_i
+      return choice if (0..2).include?(choice)
+
+      puts "Invalid #{position}. Please choose a valid #{position}."
+    end
+  end
+
+  def user_number
+    loop do
+      print 'Enter a number from 1 to 10: '
+      user_num = gets.chomp.to_i
+      return user_num if (1..10).include?(user_num)
+    end
+  end
+end
+
 # Methods related to the Gameboard
 class GameBoard
   include Utils
@@ -34,16 +86,6 @@ class GameBoard
       ['-', '-', '-'],
       ['-', '-', '-']
     ]
-  end
-
-  def play_again
-    answer = gets.chomp.downcase
-    if answer == 'y'
-      clear_console
-      clear_board
-    else
-      exit
-    end
   end
 
   def clear_board
@@ -87,13 +129,20 @@ class TicTacToe
 
   def initialize
     welcome_message
-    @player = Player.new(user_name, user_symbol)
+    @user_interaction = UserInteraction.new
+    @player = Player.new(@user_interaction.user_name, @user_interaction.user_symbol)
     @cpu = Player.new('CPU', @player.symbol == 'X' ? 'O' : 'X')
+    @user_interaction.display_player_info(@player)
+    @user_interaction.display_player_info(@cpu)
     @game_board = GameBoard.new
-    prompt_game
+    @user_interaction.prompt_game ? @play_game : 'Game Stopped!'
   end
 
   private
+
+  def start_game
+    first_mover == @cpu ? cpu_move : player_move
+  end
 
   def cpu_move
     rand_row = rand(0..2)
@@ -113,8 +162,8 @@ class TicTacToe
     player_col = T.let(nil, T.untyped)
 
     loop do
-      player_row = player_choice('row')
-      player_col = player_choice('column')
+      player_row = @user_interaction.player_choice('row')
+      player_col = @user_interaction.player_choice('column')
 
       break if @game_board.move_valid?(player_row, player_col)
 
@@ -126,45 +175,12 @@ class TicTacToe
     @game_board.check_win == false ? cpu_move : declare_winner(@player)
   end
 
-  def player_choice(position)
-    loop do
-      print "Which #{position} do you want to place your #{@player.symbol}? (0, 1, 2): "
-      choice = gets.chomp.to_i
-      return choice if (0..2).include?(choice)
-
-      puts "Invalid #{position}. Please choose a valid #{position}."
-    end
-  end
-
   def declare_winner(winner)
     puts "The winner is #{winner}!"
-    @game_board.play_again
-  end
+    return unless @user_interaction.play_again?
 
-  def prompt_game
-    print 'Start game? (y/n): '
-    if gets.chomp.downcase == 'y'
-      @game_board.start_game
-    else
-      puts 'Game Stopped'
-      nil
-    end
-  end
-
-  def user_name
-    puts "What's your name?"
-    print 'My name is: '
-    gets.chomp.to_s
-  end
-
-  def user_symbol
-    sym = String.new
-    loop do
-      print 'Choose your symbol (X)/(O): '
-      sym = gets.chomp.upcase
-      break if %w[X O].include?(sym)
-    end
-    sym
+    clear_console
+    @game_board.clear_board
   end
 
   def first_mover
@@ -179,35 +195,22 @@ class TicTacToe
   end
 
   def user_and_cpu_numbers
-    user_num = user_number
+    user_num = @user_interaction.user_number
     cpu_num = rand(1..10)
     puts "Player Number: #{user_num}"
     puts "CPU Number: #{cpu_num}"
     [user_num, cpu_num]
   end
-
-  def user_number
-    loop do
-      print 'Enter a number from 1 to 10: '
-      user_num = gets.chomp.to_i
-      return user_num if (1..10).include?(user_num)
-    end
-  end
 end
 
 # Define base class for Player and Player functions
 class Player
+  attr_reader :name, :symbol
+
   def initialize(name, symbol)
     @name = name
     @symbol = symbol
-    display_player_info
   end
-
-  def display_player_info
-    puts "#{@name}'s Symbol: #{@symbol}"
-  end
-
-  attr_reader :name, :symbol
 end
 
 # Create game instance

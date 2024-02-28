@@ -79,13 +79,6 @@ class GameBoard
     show_board
     check_win
   end
-
-  def start_game
-    clear_console
-    show_board
-    puts @game_board.first_mover == 'cpu' ? 'Making CPU Move' : 'Making Player Move'
-    @game_board.first_mover == 'cpu' ? @game_board.cpu_move : @game_board.player_move
-  end
 end
 
 # TicTacToe Class
@@ -116,6 +109,9 @@ class TicTacToe
   end
 
   def player_move
+    player_row = T.let(nil, T.untyped)
+    player_col = T.let(nil, T.untyped)
+
     loop do
       player_row = player_choice('row')
       player_col = player_choice('column')
@@ -127,11 +123,7 @@ class TicTacToe
 
     update_board(player_row, player_col, @player.symbol)
 
-    if @game_board.check_win == false
-      cpu_move
-    else
-      declare_winner(@player)
-    end
+    @game_board.check_win == false ? cpu_move : declare_winner(@player)
   end
 
   def player_choice(position)
@@ -182,19 +174,19 @@ class TicTacToe
   end
 
   def determine_first_mover
-    user_num, cpu_num = get_user_and_cpu_numbers
+    user_num, cpu_num = user_and_cpu_numbers
     cpu_num > user_num ? 'cpu' : 'player'
   end
 
-  def get_user_and_cpu_numbers
-    user_num = get_user_number
+  def user_and_cpu_numbers
+    user_num = user_number
     cpu_num = rand(1..10)
     puts "Player Number: #{user_num}"
     puts "CPU Number: #{cpu_num}"
     [user_num, cpu_num]
   end
 
-  def get_user_number
+  def user_number
     loop do
       print 'Enter a number from 1 to 10: '
       user_num = gets.chomp.to_i

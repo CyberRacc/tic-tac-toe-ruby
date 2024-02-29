@@ -147,12 +147,20 @@ class TicTacToe
   end
 
   def cpu_move
-    rand_row = rand(0..2)
-    rand_col = rand(0..2)
+    rand_row = 0
+    rand_col = 0
+
+    loop do
+      rand_row = rand(0..2)
+      rand_col = rand(0..2)
+
+      break if @game_board.move_valid?(rand_row, rand_col)
+    end
+
     @game_board.update_board(rand_row, rand_col, @cpu.symbol)
 
     # After move has been made, check if the game as been won.
-    @game_board.check_win == false ? cpu_move : declare_winner(@player)
+    @game_board.check_win == false ? player_move : declare_winner(@player)
   end
 
   def player_move
@@ -173,7 +181,7 @@ class TicTacToe
   end
 
   def declare_winner(winner)
-    puts "The winner is #{winner}!"
+    puts "The winner is #{winner.name}!"
     return unless @user_interaction.play_again?
 
     clear_console

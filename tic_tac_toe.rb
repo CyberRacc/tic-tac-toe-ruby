@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 # typed: true
 
+require 'sorbet-runtime'
+
 # Utilities module
 module Utils
   def clear_console
@@ -41,13 +43,13 @@ class UserInteraction
     answer == 'y'
   end
 
-  def display_player_info(player)
-    puts "#{player.name}'s Symbol: #{player.symbol}"
+  def display_player_info(player, symbol)
+    puts "#{player.name}'s Symbol: #{symbol}"
   end
 
-  def player_choice(position)
+  def player_choice(position, symbol)
     loop do
-      print "Which #{position} do you want to place your #{@player.symbol}? (0, 1, 2): "
+      print "Which #{position} do you want to place your #{symbol}? (0, 1, 2): "
       choice = gets.chomp.to_i
       return choice if (0..2).include?(choice)
 
@@ -98,13 +100,14 @@ class GameBoard
 
   # Predicate method to check if the current move is valid.
   def move_valid?(row, column)
-    puts 'Move is valid' if @game_board[row][column] == '-'
+    @game_board[row][column] == '-'
   end
 
   # Should be executed after every move
   def check_win
-    WINNING_COMBINATIONS.each do |win_combo|
-      win_combo.all? { |position| @game_board[position] == 'O' || @game_board[position] == 'X' }
+    WINNING_COMBINATIONS.any? do |win_combo|
+      win_combo.all? { |position| @game_board[position / 3][position % 3] == 'O' } ||
+        win_combo.all? { |position| @game_board[position / 3][position % 3] == 'X' }
     end
   end
 
@@ -119,7 +122,6 @@ class GameBoard
   def update_board(row, index, symbol)
     @game_board[row][index] = symbol
     show_board
-    check_win
   end
 end
 
@@ -132,10 +134,10 @@ class TicTacToe
     @user_interaction = UserInteraction.new
     @player = Player.new(@user_interaction.user_name, @user_interaction.user_symbol)
     @cpu = Player.new('CPU', @player.symbol == 'X' ? 'O' : 'X')
-    @user_interaction.display_player_info(@player)
-    @user_interaction.display_player_info(@cpu)
+    @user_interaction.display_player_info(@player, @player.symbol)
+    @user_interaction.display_player_info(@cpu, @cpu.symbol)
     @game_board = GameBoard.new
-    @user_interaction.prompt_game ? @play_game : 'Game Stopped!'
+    @user_interaction.prompt_game ? start_game : (puts 'Game Stopped!')
   end
 
   private
@@ -147,30 +149,25 @@ class TicTacToe
   def cpu_move
     rand_row = rand(0..2)
     rand_col = rand(0..2)
-    update_board(rand_row, rand_col, @cpu.symbol)
+    @game_board.update_board(rand_row, rand_col, @cpu.symbol)
 
     # After move has been made, check if the game as been won.
-    if @game_board.check_win == false
-      player_move
-    else
-      declare_winner(@cpu)
-    end
+    @game_board.check_win == false ? cpu_move : declare_winner(@player)
   end
 
   def player_move
-    player_row = T.let(nil, T.untyped)
-    player_col = T.let(nil, T.untyped)
+    player_row = T.let(0, T.untyped)
+    player_col = T.let(0, T.untyped)
 
     loop do
-      player_row = @user_interaction.player_choice('row')
-      player_col = @user_interaction.player_choice('column')
-
+      player_row = @user_interaction.player_choice('row', @player.symbol)
+      player_col = @user_interaction.player_choice('column', @player.symbol)
       break if @game_board.move_valid?(player_row, player_col)
 
       puts 'Invalid move. Please try again.'
     end
 
-    update_board(player_row, player_col, @player.symbol)
+    @game_board.update_board(player_row, player_col, @player.symbol)
 
     @game_board.check_win == false ? cpu_move : declare_winner(@player)
   end
@@ -181,6 +178,7 @@ class TicTacToe
 
     clear_console
     @game_board.clear_board
+    TicTacToe.new
   end
 
   def first_mover
